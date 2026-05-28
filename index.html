@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ゴルフ戦績</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #f0f4f0;
+      min-height: 100vh;
+      color: #2d3748;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; min-height: 100vh; }
+
+    .header {
+      background: #06c755;
+      color: white;
+      padding: 14px 20px;
+      font-size: 17px;
+      font-weight: bold;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .content { padding: 16px; padding-bottom: 36px; }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #888;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ---- 参加者 ---- */
+    .player-item {
+      display: flex;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid #f0f4f0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .player-item:last-child { border-bottom: none; }
+
+    .player-cb { width: 22px; height: 22px; margin-right: 12px; accent-color: #06c755; flex-shrink: 0; cursor: pointer; }
+    .player-label { font-size: 16px; flex: 1; cursor: pointer; }
+
+    .r-badge {
+      font-size: 10px; background: #e6f7ff; color: #0070cc;
+      border-radius: 4px; padding: 2px 5px; margin-left: 5px; font-weight: 700;
+    }
+
+    .player-stats { font-size: 11px; color: #888; text-align: right; line-height: 1.6; }
+
+    /* ---- バナー ---- */
+    .info-bar {
+      border-radius: 8px; padding: 8px 12px; font-size: 13px;
+      margin-bottom: 14px; text-align: center; display: none;
+    }
+    .info-bar.show { display: block; }
+    .info-bar.blue { background: #e6f7ff; border: 1px solid #91d5ff; color: #0070cc; }
+
+    .err-banner {
+      background: #fff5f5; border: 1px solid #feb2b2;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; color: #c53030; margin-bottom: 14px; display: none;
+    }
+
+    /* ---- 勝者 ---- */
+    .winner-item {
+      display: flex; align-items: center;
+      padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+      margin-bottom: 9px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .winner-item.selected { border-color: #ed8936; background: #fffaf0; }
+    .winner-crown { font-size: 18px; margin-right: 10px; opacity: 0; transition: opacity 0.15s; }
+    .winner-item.selected .winner-crown { opacity: 1; }
+    .winner-name { font-size: 16px; font-weight: 500; }
+
+    /* ---- 順位入力 ---- */
+    .rank-controls {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+
+    .rank-hint { font-size: 13px; color: #888; flex: 1; }
+
+    .btn-tie {
+      border: 2px solid #e2e8f0; background: white;
+      border-radius: 8px; padding: 7px 12px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      color: #4a5568; white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .btn-tie.active { border-color: #ed8936; background: #fffaf0; color: #c05621; }
+    .btn-tie:disabled { opacity: 0.3; }
+
+    .rank-item {
+      display: flex; align-items: center;
+      padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+      margin-bottom: 9px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rank-item.done { border-color: #68d391; background: #f0fff4; cursor: default; }
+    .rank-item.done.tied { border-color: #f6ad55; background: #fffaf0; }
+
+    .rank-no {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #e2e8f0; color: #888;
+      font-weight: 700; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-right: 12px; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .rank-item.done .rank-no { background: #06c755; color: white; }
+    .rank-item.done.tied .rank-no { background: #ed8936; color: white; }
+
+    .rank-name { font-size: 16px; font-weight: 500; flex: 1; }
+    .rank-pts  { font-size: 12px; color: #0070cc; margin-right: 8px; font-weight: 600; }
+
+    .rank-undo {
+      background: #fed7d7; border: none; border-radius: 50%;
+      width: 26px; height: 26px; font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ---- 確認 ---- */
+    .c-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 11px 0; border-bottom: 1px solid #f0f4f0;
+    }
+    .c-row:last-child { border-bottom: none; }
+    .c-left { display: flex; align-items: center; }
+
+    .c-rank-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-right: 10px; flex-shrink: 0;
+      background: #e2e8f0; color: #718096;
+    }
+    .c-rank-dot.r1 { background: #f6c90e; color: #333; }
+    .c-rank-dot.r2 { background: #a8a8a8; color: white; }
+    .c-rank-dot.r3 { background: #cd7f32; color: white; }
+
+    .c-name { font-size: 15px; font-weight: 500; }
+    .c-right { text-align: right; }
+    .c-money { font-size: 16px; font-weight: 700; }
+    .c-pts   { font-size: 12px; margin-top: 2px; color: #0070cc; font-weight: 600; }
+
+    /* ---- 完了画面 ---- */
+    .done-player { padding: 12px 0; border-bottom: 1px solid #f0f4f0; }
+    .done-player:last-child { border-bottom: none; }
+
+    .done-header { display: flex; align-items: center; margin-bottom: 7px; }
+
+    .done-rank-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-right: 10px; flex-shrink: 0;
+      background: #e2e8f0; color: #718096;
+    }
+    .done-rank-circle.r1 { background: #f6c90e; color: #333; }
+    .done-rank-circle.r2 { background: #a8a8a8; color: white; }
+    .done-rank-circle.r3 { background: #cd7f32; color: white; }
+
+    .done-name { font-size: 16px; font-weight: 600; }
+
+    .done-stat {
+      display: flex; align-items: center; gap: 8px;
+      padding-left: 38px; font-size: 13px; margin-top: 3px;
+    }
+
+    .done-label { color: #888; font-size: 11px; width: 24px; flex-shrink: 0; }
+    .done-val   { font-weight: 700; }
+    .done-sub   { font-size: 11px; color: #888; }
+
+    .pos { color: #2f855a; }
+    .neg { color: #c53030; }
+    .neu { color: #718096; }
+    .blue { color: #0070cc; }
+
+    /* ---- ボタン ---- */
+    .btn {
+      display: block; width: 100%; padding: 15px; border: none;
+      border-radius: 12px; font-size: 16px; font-weight: 700;
+      cursor: pointer; margin-bottom: 10px; transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:disabled { opacity: 0.4; }
+    .btn-primary { background: #06c755; color: white; }
+    .btn-share   { background: #06c755; color: white; }
+    .btn-ghost   { background: white; color: #4a5568; border: 2px solid #e2e8f0; }
+
+    .steps { display: flex; justify-content: center; gap: 7px; margin-bottom: 16px; }
+    .step { width: 8px; height: 8px; border-radius: 50%; background: #d0d0d0; }
+    .step.on { background: #06c755; }
+
+    #screen-loading {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; min-height: 100vh;
+    }
+    .spinner {
+      width: 38px; height: 38px;
+      border: 4px solid #e2e8f0; border-top-color: #06c755;
+      border-radius: 50%; animation: spin 0.7s linear infinite; margin-bottom: 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { color: #888; font-size: 14px; }
+
+    .done-icon  { text-align: center; font-size: 60px; padding: 28px 0 12px; }
+    .done-title { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+    .date-bar   { text-align: center; font-size: 13px; color: #888; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="screen-loading">
+  <div class="spinner"></div>
+  <div class="loading-msg">読み込み中...</div>
+</div>
+
+<!-- Screen 1: 参加者選択 -->
+<div id="screen-select" class="screen">
+  <div class="header">ゴルフ戦績</div>
+  <div class="content">
+    <div class="date-bar" id="date-bar"></div>
+    <div class="err-banner" id="err-banner"></div>
+    <div class="info-bar blue" id="rank-notify">🎯 ランキングメンバー全員参加 → ポイントも記録されます</div>
+    <div class="card">
+      <div class="card-title">参加者を選択</div>
+      <div id="player-list"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-to-winners" onclick="goWinners()" disabled>次へ →</button>
+  </div>
+</div>
+
+<!-- Screen 2: 勝者選択 -->
+<div id="screen-winners" class="screen">
+  <div class="header">ゴルフ戦績</div>
+  <div class="content">
+    <div class="steps">
+      <div class="step"></div><div class="step on"></div>
+      <div class="step"></div><div class="step"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">勝者を選択（複数可・山分け）</div>
+      <div id="winner-list"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-to-ranking" onclick="goRanking()" disabled>次へ（順位入力）→</button>
+    <button class="btn btn-ghost" onclick="show('screen-select')">← 戻る</button>
+  </div>
+</div>
+
+<!-- Screen 3: 順位入力（全員） -->
+<div id="screen-ranking" class="screen">
+  <div class="header">ゴルフ戦績</div>
+  <div class="content">
+    <div class="steps">
+      <div class="step"></div><div class="step"></div>
+      <div class="step on"></div><div class="step"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">全員の順位（1位からタップ）</div>
+      <div class="rank-controls">
+        <div class="rank-hint" id="rank-hint">1位の選手をタップしてください</div>
+        <button class="btn-tie" id="btn-tie" onclick="toggleTie()" disabled>同率</button>
+      </div>
+      <div id="ranking-list"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-to-confirm" onclick="goConfirm()" disabled>確認 →</button>
+    <button class="btn btn-ghost" onclick="show('screen-winners')">← 戻る</button>
+  </div>
+</div>
+
+<!-- Screen 4: 確認 -->
+<div id="screen-confirm" class="screen">
+  <div class="header">ゴルフ戦績</div>
+  <div class="content">
+    <div class="steps">
+      <div class="step"></div><div class="step"></div>
+      <div class="step"></div><div class="step on"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">確認</div>
+      <div id="confirm-rows"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-submit" onclick="submit()">記録する ✓</button>
+    <button class="btn btn-ghost" onclick="show('screen-ranking')">← 戻る</button>
+  </div>
+</div>
+
+<!-- Screen 5: 完了 -->
+<div id="screen-done" class="screen">
+  <div class="header">ゴルフ戦績</div>
+  <div class="content">
+    <div class="done-icon">✅</div>
+    <div class="done-title">記録完了！</div>
+    <div class="card">
+      <div class="card-title">今回 / 累計</div>
+      <div id="done-rows"></div>
+    </div>
+    <button class="btn btn-share" onclick="shareToLine()">LINEに送る</button>
+    <button class="btn btn-ghost" onclick="reset()">新しい記録</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// 設定
+// =============================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxb67ktpS2nQh1p88VoiVQ_8vgJiVMSuv__nVUVUyRpEo2QoxwnMRcDVHrKG5v-mnzgGA/exec';  // ← GASデプロイ後に書き換え
+const LIFF_ID = 'YOUR_LIFF_ID';          // ← LIFFアプリ作成後に書き換え
+
+const RANKING_MEMBERS = ['伊波', '岡田', '河添', '村瀬', '平野', '穐葉'];
+const RANK_PTS  = [6, 4, 3, 2, 1, 0];
+const WIN_PRICE = 1500;
+
+// =============================================
+// 状態
+// =============================================
+const S = {
+  allPlayers:    [],        // Sheets取得（name, money, points, winnings）
+  selected:      [],        // 参加者
+  rankingActive: false,     // 6人全員いる → ポイント付与
+  winners:       [],        // 勝者
+  ranking:       [],        // [{name, rank}] 同順あり
+  tieNext:       false,     // 次のタップを同率にする
+  result:        null
+};
+
+// =============================================
+// 起動
+// =============================================
+(async () => {
+  setDateBar();
+  try { await liff.init({ liffId: LIFF_ID }); }
+  catch (e) { console.warn('LIFF init skipped'); }
+  await loadPlayers();
+})();
+
+function setDateBar() {
+  const d = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('date-bar').textContent =
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+}
+
+async function loadPlayers() {
+  try {
+    const res = await fetch(`${GAS_URL}?action=getPlayers`, { redirect: 'follow' });
+    const data = await res.json();
+    S.allPlayers = data.players;
+  } catch (e) {
+    S.allPlayers = [
+      ...RANKING_MEMBERS.map(n => ({ name: n, money: 0, points: 0, winnings: 0 })),
+      { name: 'ゲスト1', money: 0, points: 0, winnings: 0 },
+    ];
+    showErr('オフライン確認モード（テストデータ）');
+  }
+  renderPlayerList();
+  document.getElementById('screen-loading').style.display = 'none';
+  show('screen-select');
+}
+
+// =============================================
+// Screen 1: 参加者選択
+// =============================================
+function renderPlayerList() {
+  document.getElementById('player-list').innerHTML =
+    S.allPlayers.map((p, i) => {
+      const isR = RANKING_MEMBERS.includes(p.name);
+      return `
+        <div class="player-item" onclick="toggleCb(${i})">
+          <input type="checkbox" class="player-cb" id="cb${i}"
+                 onchange="onPlayerChange()" onclick="event.stopPropagation()">
+          <label class="player-label" for="cb${i}">
+            ${p.name}${isR ? '<span class="r-badge">R</span>' : ''}
+          </label>
+          <div class="player-stats">
+            <div>${fmt(p.money, '円')}</div>
+            <div>${isR ? p.points + 'pt' : '&nbsp;'}</div>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+function toggleCb(i) {
+  const cb = document.getElementById(`cb${i}`);
+  cb.checked = !cb.checked;
+  onPlayerChange();
+}
+
+function onPlayerChange() {
+  const idxs = checkedIdxs();
+  const ok = idxs.length >= 2;
+  const btn = document.getElementById('btn-to-winners');
+  btn.disabled = !ok;
+  btn.textContent = ok ? '次へ →' : `2人以上選択してください（${idxs.length}人）`;
+
+  const names = new Set(idxs.map(i => S.allPlayers[i].name));
+  document.getElementById('rank-notify').classList
+    .toggle('show', RANKING_MEMBERS.every(n => names.has(n)));
+}
+
+function checkedIdxs() {
+  return [...document.querySelectorAll('.player-cb:checked')]
+    .map(cb => parseInt(cb.id.replace('cb', '')));
+}
+
+function goWinners() {
+  S.selected = checkedIdxs().map(i => S.allPlayers[i]);
+  const names = new Set(S.selected.map(p => p.name));
+  S.rankingActive = RANKING_MEMBERS.every(n => names.has(n));
+  S.winners = [];
+  renderWinners();
+  show('screen-winners');
+}
+
+// =============================================
+// Screen 2: 勝者
+// =============================================
+function renderWinners() {
+  document.getElementById('winner-list').innerHTML =
+    S.selected.map((p, i) => `
+      <div class="winner-item" id="wi${i}" onclick="toggleWinner(${i})">
+        <span class="winner-crown">🏆</span>
+        <span class="winner-name">${p.name}</span>
+      </div>`).join('');
+  updateWinnerBtn();
+}
+
+function toggleWinner(i) {
+  document.getElementById(`wi${i}`).classList.toggle('selected');
+  updateWinnerBtn();
+}
+
+function updateWinnerBtn() {
+  document.getElementById('btn-to-ranking').disabled =
+    document.querySelectorAll('.winner-item.selected').length === 0;
+}
+
+function goRanking() {
+  S.winners = [...document.querySelectorAll('.winner-item.selected')]
+    .map(el => S.selected[parseInt(el.id.replace('wi', ''))]);
+  S.ranking = [];
+  S.tieNext = false;
+  renderRanking();
+  show('screen-ranking');
+}
+
+// =============================================
+// Screen 3: 順位（全員・同率対応）
+// =============================================
+function getLastRank() {
+  return S.ranking.length > 0 ? S.ranking[S.ranking.length - 1].rank : 0;
+}
+
+function getNextRank() {
+  if (S.ranking.length === 0) return 1;
+  const last = getLastRank();
+  return last + S.ranking.filter(r => r.rank === last).length;
+}
+
+function toggleTie() {
+  if (S.ranking.length === 0) return;
+  S.tieNext = !S.tieNext;
+  renderRanking();
+}
+
+function tapRank(i) {
+  const p = S.selected[i];
+  if (S.ranking.find(r => r.name === p.name)) return;
+
+  const rank = (S.tieNext && S.ranking.length > 0) ? getLastRank() : getNextRank();
+  S.ranking.push({ name: p.name, rank });
+  S.tieNext = false;
+  renderRanking();
+}
+
+function undoFrom(name) {
+  const entry = S.ranking.find(r => r.name === name);
+  if (!entry) return;
+  S.ranking = S.ranking.filter(r => r.rank < entry.rank);
+  S.tieNext = false;
+  renderRanking();
+}
+
+function renderRanking() {
+  const rankPtsMap = S.rankingActive ? calcRankingPoints(S.ranking) : {};
+
+  document.getElementById('ranking-list').innerHTML =
+    S.selected.map((p, i) => {
+      const entry = S.ranking.find(r => r.name === p.name);
+      const done  = !!entry;
+      const rank  = done ? entry.rank : null;
+      const isTied = done && S.ranking.filter(r => r.rank === rank).length > 1;
+      const isR   = RANKING_MEMBERS.includes(p.name);
+      const pts   = (done && isR && rankPtsMap[p.name] !== undefined)
+        ? fmtPts(rankPtsMap[p.name]) : '';
+
+      return `
+        <div class="rank-item ${done ? 'done' : ''} ${isTied ? 'tied' : ''}"
+             id="ri_${i}" onclick="${!done ? `tapRank(${i})` : ''}">
+          <div class="rank-no">${done ? rank : '?'}</div>
+          <span class="rank-name">${p.name}${isR ? '<span class="r-badge">R</span>' : ''}</span>
+          <span class="rank-pts">${pts}</span>
+          ${done ? `<button class="rank-undo"
+                      onclick="event.stopPropagation();undoFrom('${p.name}')">✕</button>` : ''}
+        </div>`;
+    }).join('');
+
+  const remaining = S.selected.length - S.ranking.length;
+  const tieBtn = document.getElementById('btn-tie');
+  tieBtn.disabled = S.ranking.length === 0;
+  tieBtn.classList.toggle('active', S.tieNext);
+  tieBtn.textContent = S.tieNext ? '同率選択中 ●' : '同率';
+
+  document.getElementById('rank-hint').textContent =
+    remaining > 0
+      ? (S.tieNext ? `同率${getLastRank()}位の選手をタップ` : `${getNextRank()}位の選手をタップ`)
+      : '順位確定 ✓';
+
+  document.getElementById('btn-to-confirm').disabled = remaining > 0;
+}
+
+// =============================================
+// ポイント計算（ランキングメンバー内の相対順位・山分け対応）
+// =============================================
+function calcRankingPoints(rankingData) {
+  // ランキングメンバーのみ抽出し、全体順位でソート
+  const members = rankingData
+    .filter(r => RANKING_MEMBERS.includes(r.name))
+    .sort((a, b) => a.rank - b.rank);
+
+  // メンバー内相対順位を付与（ties保持）
+  const memberPos = {};
+  let pos = 1;
+  for (let i = 0; i < members.length; i++) {
+    if (i > 0 && members[i].rank === members[i - 1].rank) {
+      memberPos[members[i].name] = memberPos[members[i - 1].name];
+    } else {
+      memberPos[members[i].name] = pos;
+    }
+    pos++;
+  }
+
+  // 同率を考慮してポイントを山分け
+  const pts = {};
+  members.forEach(m => {
+    const mp   = memberPos[m.name];
+    const tied = members.filter(x => memberPos[x.name] === mp).length;
+    let sum = 0;
+    for (let i = mp - 1; i < mp - 1 + tied && i < RANK_PTS.length; i++) {
+      sum += RANK_PTS[i];
+    }
+    pts[m.name] = tied > 1 ? sum / tied : (RANK_PTS[mp - 1] ?? 0);
+  });
+  return pts;
+}
+
+// =============================================
+// Screen 4: 確認
+// =============================================
+function goConfirm() {
+  S.result = calcResults();
+  document.getElementById('confirm-rows').innerHTML = buildConfirmRows(S.result);
+  show('screen-confirm');
+}
+
+function calcResults() {
+  const wCount = S.winners.length;
+  const lCount = S.selected.length - wCount;
+
+  // 山分け: 負け人数 × 1500 を勝者で割る
+  const prizeEach = wCount > 0 ? Math.round((WIN_PRICE * lCount) / wCount) : 0;
+
+  const rankPtsMap = S.rankingActive ? calcRankingPoints(S.ranking) : {};
+
+  return S.selected.map(p => {
+    const isWin   = S.winners.some(w => w.name === p.name);
+    const money   = isWin ? prizeEach : (wCount > 0 ? -WIN_PRICE : 0);
+    const entry   = S.ranking.find(r => r.name === p.name);
+    const rank    = entry ? entry.rank : null;
+    const isR     = RANKING_MEMBERS.includes(p.name);
+    const pts     = (S.rankingActive && isR && rankPtsMap[p.name] !== undefined)
+      ? rankPtsMap[p.name] : null;
+
+    return { name: p.name, moneyDelta: money, pointsDelta: pts, isWinner: isWin, rank };
+  });
+}
+
+function rankClass(rank) {
+  if (rank === 1) return 'r1';
+  if (rank === 2) return 'r2';
+  if (rank === 3) return 'r3';
+  return '';
+}
+
+function buildConfirmRows(results) {
+  return [...results]
+    .sort((a, b) => a.rank - b.rank)
+    .map(r => `
+      <div class="c-row">
+        <div class="c-left">
+          <div class="c-rank-dot ${rankClass(r.rank)}">${r.rank}</div>
+          <span class="c-name">${r.name}${r.isWinner ? ' 🏆' : ''}</span>
+        </div>
+        <div class="c-right">
+          <div class="c-money ${r.moneyDelta >= 0 ? 'pos' : 'neg'}">${fmt(r.moneyDelta, '円')}</div>
+          ${r.pointsDelta !== null ? `<div class="c-pts">${fmtPts(r.pointsDelta)}</div>` : ''}
+        </div>
+      </div>`).join('');
+}
+
+// =============================================
+// Screen 5: 送信・完了
+// =============================================
+async function submit() {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+
+  const payload = {
+    date:         new Date().toISOString(),
+    participants: S.selected.map(p => p.name),
+    winners:      S.winners.map(p => p.name),
+    ranking:      S.ranking,
+    results:      S.result
+  };
+
+  try {
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+  } catch (e) { console.warn('POST error:', e); }
+
+  document.getElementById('done-rows').innerHTML = buildDoneRows(S.result);
+  show('screen-done');
+}
+
+function buildDoneRows(results) {
+  return [...results]
+    .sort((a, b) => a.rank - b.rank)
+    .map(r => {
+      const base = S.allPlayers.find(p => p.name === r.name)
+        || { money: 0, points: 0, winnings: 0 };
+      const isR       = RANKING_MEMBERS.includes(r.name);
+      const cumMoney  = base.money + r.moneyDelta;
+      const cumWin    = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
+      const cumPts    = isR ? base.points + (r.pointsDelta ?? 0) : null;
+
+      const ptsStr = r.pointsDelta !== null ? fmtPts(r.pointsDelta, true) : '';
+
+      return `
+        <div class="done-player">
+          <div class="done-header">
+            <div class="done-rank-circle ${rankClass(r.rank)}">${r.rank}位</div>
+            <span class="done-name">${r.name}${r.isWinner ? ' 🏆' : ''}</span>
+          </div>
+          <div class="done-stat">
+            <span class="done-label">今回</span>
+            <span class="done-val ${r.moneyDelta >= 0 ? 'pos' : 'neg'}">${fmt(r.moneyDelta, '円')}</span>
+            ${ptsStr ? `<span class="done-val blue">${ptsStr}</span>` : ''}
+          </div>
+          <div class="done-stat">
+            <span class="done-label">累計</span>
+            <span class="done-val ${cumMoney >= 0 ? 'pos' : 'neg'}">${fmt(cumMoney, '円')}</span>
+            <span class="done-sub">獲得 ${cumWin.toLocaleString()}円</span>
+            ${cumPts !== null
+              ? `<span class="done-val neu">${fmtPts(cumPts)}` + (cumPts !== null ? '</span>' : '')
+              : ''}
+          </div>
+        </div>`;
+    }).join('');
+}
+
+function shareToLine() {
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  let msg = `⛳ ゴルフ戦績 ${dateStr}\n\n`;
+
+  [...S.result].sort((a, b) => a.rank - b.rank).forEach(r => {
+    const base = S.allPlayers.find(p => p.name === r.name)
+      || { money: 0, points: 0, winnings: 0 };
+    const isR      = RANKING_MEMBERS.includes(r.name);
+    const cumMoney = base.money + r.moneyDelta;
+    const cumWin   = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
+    const cumPts   = isR ? base.points + (r.pointsDelta ?? 0) : null;
+
+    msg += `${r.rank}位 ${r.name}${r.isWinner ? '🏆' : ''}\n`;
+    msg += `  今回 ${fmt(r.moneyDelta, '円')}`;
+    if (r.pointsDelta !== null) msg += `  ${fmtPts(r.pointsDelta, true)}`;
+    msg += `\n  累計 ${fmt(cumMoney, '円')}（獲得 ${cumWin.toLocaleString()}円）`;
+    if (cumPts !== null) msg += `  ${fmtPts(cumPts)}`;
+    msg += '\n\n';
+  });
+
+  if (liff.isInClient()) {
+    liff.sendMessages([{ type: 'text', content: msg.trimEnd() }])
+      .then(() => liff.closeWindow())
+      .catch(err => alert('送信失敗: ' + err));
+  } else {
+    alert('LINEへの送信内容:\n\n' + msg);
+  }
+}
+
+function reset() {
+  S.selected = []; S.rankingActive = false;
+  S.winners = []; S.ranking = []; S.tieNext = false; S.result = null;
+  document.querySelectorAll('.player-cb').forEach(cb => cb.checked = false);
+  document.getElementById('rank-notify').classList.remove('show');
+  onPlayerChange();
+  show('screen-select');
+}
+
+// =============================================
+// ユーティリティ
+// =============================================
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function fmt(n, unit) {
+  return (n >= 0 ? '+' : '') + n.toLocaleString() + unit;
+}
+
+// 整数なら整数表示、小数なら1桁
+function fmtPts(n, withSign = false) {
+  const sign = withSign && n > 0 ? '+' : '';
+  const num  = n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1);
+  return `${sign}${num}pt`;
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-banner');
+  el.textContent = msg; el.style.display = 'block';
+}
+</script>
+</body>
+</html>
