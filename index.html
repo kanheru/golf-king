@@ -15,6 +15,24 @@
       color: #2d3748;
     }
 
+    /* 第○回バッジ */
+    #session-badge {
+      display: none;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 200;
+      background: white;
+      color: #06c755;
+      border: 2px solid #06c755;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      pointer-events: none;
+    }
+
     .screen { display: none; }
     .screen.active { display: block; min-height: 100vh; }
 
@@ -30,7 +48,7 @@
       z-index: 10;
     }
 
-    .content { padding: 16px; padding-bottom: 36px; }
+    .content { padding: 16px; padding-bottom: 40px; }
 
     .card {
       background: white;
@@ -49,34 +67,110 @@
       margin-bottom: 12px;
     }
 
-    /* ---- 参加者 ---- */
+    /* ---- トグルスイッチ ---- */
+    .toggle-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toggle-title { font-size: 15px; font-weight: 700; }
+    .toggle-sub   { font-size: 12px; color: #888; margin-top: 3px; }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      border-radius: 28px;
+      transition: 0.3s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 22px; width: 22px;
+      left: 3px; bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #06c755; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+    /* ---- 参加者リスト ---- */
     .player-item {
       display: flex;
-      align-items: center;
-      padding: 11px 0;
+      align-items: flex-start;
+      padding: 12px 0;
       border-bottom: 1px solid #f0f4f0;
       -webkit-tap-highlight-color: transparent;
     }
     .player-item:last-child { border-bottom: none; }
 
-    .player-cb { width: 22px; height: 22px; margin-right: 12px; accent-color: #06c755; flex-shrink: 0; cursor: pointer; }
-    .player-label { font-size: 16px; flex: 1; cursor: pointer; }
+    .player-cb {
+      width: 22px; height: 22px;
+      margin-right: 12px; margin-top: 4px;
+      accent-color: #06c755;
+      flex-shrink: 0; cursor: pointer;
+    }
+
+    .player-main {
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .player-name-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .player-name { font-size: 16px; font-weight: 500; }
 
     .r-badge {
       font-size: 10px; background: #e6f7ff; color: #0070cc;
-      border-radius: 4px; padding: 2px 5px; margin-left: 5px; font-weight: 700;
+      border-radius: 4px; padding: 2px 5px; font-weight: 700;
+      flex-shrink: 0;
     }
 
-    .player-stats { font-size: 11px; color: #888; text-align: right; line-height: 1.6; }
+    .edit-guest-btn {
+      background: none; border: none;
+      font-size: 13px; cursor: pointer;
+      padding: 1px 4px;
+      color: #bbb;
+      line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .guest-name-input {
+      border: 1px solid #06c755;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 14px;
+      width: 110px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .player-stats {
+      font-size: 11px;
+      color: #888;
+      text-align: right;
+      line-height: 1.8;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
 
     /* ---- バナー ---- */
-    .info-bar {
-      border-radius: 8px; padding: 8px 12px; font-size: 13px;
-      margin-bottom: 14px; text-align: center; display: none;
-    }
-    .info-bar.show { display: block; }
-    .info-bar.blue { background: #e6f7ff; border: 1px solid #91d5ff; color: #0070cc; }
-
     .err-banner {
       background: #fff5f5; border: 1px solid #feb2b2;
       border-radius: 8px; padding: 10px 14px;
@@ -100,7 +194,6 @@
     .rank-controls {
       display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
     }
-
     .rank-hint { font-size: 13px; color: #888; flex: 1; }
 
     .btn-tie {
@@ -134,10 +227,8 @@
     }
     .rank-item.done .rank-no { background: #06c755; color: white; }
     .rank-item.done.tied .rank-no { background: #ed8936; color: white; }
-
     .rank-name { font-size: 16px; font-weight: 500; flex: 1; }
     .rank-pts  { font-size: 12px; color: #0070cc; margin-right: 8px; font-weight: 600; }
-
     .rank-undo {
       background: #fed7d7; border: none; border-radius: 50%;
       width: 26px; height: 26px; font-size: 12px;
@@ -163,13 +254,12 @@
     .c-rank-dot.r1 { background: #f6c90e; color: #333; }
     .c-rank-dot.r2 { background: #a8a8a8; color: white; }
     .c-rank-dot.r3 { background: #cd7f32; color: white; }
-
-    .c-name { font-size: 15px; font-weight: 500; }
+    .c-name  { font-size: 15px; font-weight: 500; }
     .c-right { text-align: right; }
     .c-money { font-size: 16px; font-weight: 700; }
     .c-pts   { font-size: 12px; margin-top: 2px; color: #0070cc; font-weight: 600; }
 
-    /* ---- 完了画面 ---- */
+    /* ---- 完了 ---- */
     .done-player { padding: 12px 0; border-bottom: 1px solid #f0f4f0; }
     .done-player:last-child { border-bottom: none; }
 
@@ -185,21 +275,19 @@
     .done-rank-circle.r1 { background: #f6c90e; color: #333; }
     .done-rank-circle.r2 { background: #a8a8a8; color: white; }
     .done-rank-circle.r3 { background: #cd7f32; color: white; }
-
     .done-name { font-size: 16px; font-weight: 600; }
 
     .done-stat {
       display: flex; align-items: center; gap: 8px;
-      padding-left: 38px; font-size: 13px; margin-top: 3px;
+      padding-left: 38px; font-size: 13px; margin-top: 4px;
     }
-
-    .done-label { color: #888; font-size: 11px; width: 24px; flex-shrink: 0; }
+    .done-label { color: #888; font-size: 11px; width: 28px; flex-shrink: 0; }
     .done-val   { font-weight: 700; }
     .done-sub   { font-size: 11px; color: #888; }
 
-    .pos { color: #2f855a; }
-    .neg { color: #c53030; }
-    .neu { color: #718096; }
+    .pos  { color: #2f855a; }
+    .neg  { color: #c53030; }
+    .neu  { color: #718096; }
     .blue { color: #0070cc; }
 
     /* ---- ボタン ---- */
@@ -213,9 +301,10 @@
     .btn-primary { background: #06c755; color: white; }
     .btn-share   { background: #06c755; color: white; }
     .btn-ghost   { background: white; color: #4a5568; border: 2px solid #e2e8f0; }
+    .btn-edit    { background: #edf2f7; color: #4a5568; font-size: 14px; border: none; }
 
     .steps { display: flex; justify-content: center; gap: 7px; margin-bottom: 16px; }
-    .step { width: 8px; height: 8px; border-radius: 50%; background: #d0d0d0; }
+    .step  { width: 8px; height: 8px; border-radius: 50%; background: #d0d0d0; }
     .step.on { background: #06c755; }
 
     #screen-loading {
@@ -237,6 +326,9 @@
 </head>
 <body>
 
+<!-- 第○回バッジ（全画面共通・固定表示） -->
+<div id="session-badge">第?回</div>
+
 <!-- Loading -->
 <div id="screen-loading">
   <div class="spinner"></div>
@@ -249,7 +341,22 @@
   <div class="content">
     <div class="date-bar" id="date-bar"></div>
     <div class="err-banner" id="err-banner"></div>
-    <div class="info-bar blue" id="rank-notify">🎯 ランキングメンバー全員参加 → ポイントも記録されます</div>
+
+    <!-- ポイントモードトグル -->
+    <div class="card">
+      <div class="toggle-wrap">
+        <div>
+          <div class="toggle-title">ポイント記録</div>
+          <div class="toggle-sub" id="points-toggle-sub">OFF：賞金のみ記録</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="points-toggle" onchange="onPointsToggle()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 参加者リスト -->
     <div class="card">
       <div class="card-title">参加者を選択</div>
       <div id="player-list"></div>
@@ -309,7 +416,8 @@
       <div id="confirm-rows"></div>
     </div>
     <button class="btn btn-primary" id="btn-submit" onclick="submit()">記録する ✓</button>
-    <button class="btn btn-ghost" onclick="show('screen-ranking')">← 戻る</button>
+    <button class="btn btn-edit" onclick="editWinners()">✏️ 勝者を修正</button>
+    <button class="btn btn-edit" onclick="editRanking()">✏️ 順位を修正</button>
   </div>
 </div>
 
@@ -332,8 +440,8 @@
 // =============================================
 // 設定
 // =============================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyuOK5SMZHWumCEocUFGJ2GlQcProfBhfLRVekcPCwKWnhsJxgpbYxJxyCGZb2-TWklYw/exec';  // ← GASデプロイ後に書き換え
-const LIFF_ID = 'https://kanheru.github.io/golf-king/';          // ← LIFFアプリ作成後に書き換え
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbythCEesOyCc5-qYbPnFf4_NcK9xfDASFZ-fc7AQZ99f1zAr-DcSwz2n3xpxTvi_BsrPw/exec';
+const LIFF_ID = 'YOUR_LIFF_ID';  // ← LIFFアプリ作成後に書き換え
 
 const RANKING_MEMBERS = ['伊波', '岡田', '河添', '村瀬', '平野', '穐葉'];
 const RANK_PTS  = [6, 4, 3, 2, 1, 0];
@@ -343,13 +451,14 @@ const WIN_PRICE = 1500;
 // 状態
 // =============================================
 const S = {
-  allPlayers:    [],        // Sheets取得（name, money, points, winnings）
-  selected:      [],        // 参加者
-  rankingActive: false,     // 6人全員いる → ポイント付与
-  winners:       [],        // 勝者
-  ranking:       [],        // [{name, rank}] 同順あり
-  tieNext:       false,     // 次のタップを同率にする
-  result:        null
+  allPlayers:   [],    // {name, origName, money, points, winnings, games, wins}
+  sessionCount: 0,     // ポイントあり記録の累計数（GASから取得）
+  selected:     [],    // 選択した参加者（allPlayersへの参照）
+  pointsMode:   false, // ポイントON/OFFトグル
+  winners:      [],    // 勝者
+  ranking:      [],    // [{name, rank}] 同順あり
+  tieNext:      false, // 次のタップを同率にする
+  result:       null
 };
 
 // =============================================
@@ -371,14 +480,18 @@ function setDateBar() {
 
 async function loadPlayers() {
   try {
-    const res = await fetch(`${GAS_URL}?action=getPlayers`, { redirect: 'follow' });
+    const res  = await fetch(`${GAS_URL}?action=getPlayers`, { redirect: 'follow' });
     const data = await res.json();
-    S.allPlayers = data.players;
+    S.allPlayers  = data.players.map(p => ({ ...p, origName: p.name }));
+    S.sessionCount = data.sessionCount || 0;
   } catch (e) {
+    // オフラインフォールバック
+    const guestNames = ['ゲスト1','ゲスト2','ゲスト3','ゲスト4','ゲスト5','ゲスト6','ゲスト7','ゲスト8'];
     S.allPlayers = [
-      ...RANKING_MEMBERS.map(n => ({ name: n, money: 0, points: 0, winnings: 0 })),
-      { name: 'ゲスト1', money: 0, points: 0, winnings: 0 },
+      ...RANKING_MEMBERS.map(n => ({ name: n, origName: n, money: 0, points: 0, winnings: 0, games: 0, wins: 0 })),
+      ...guestNames.map(n    => ({ name: n, origName: n, money: 0, points: 0, winnings: 0, games: 0, wins: 0 }))
     ];
+    S.sessionCount = 0;
     showErr('オフライン確認モード（テストデータ）');
   }
   renderPlayerList();
@@ -389,23 +502,49 @@ async function loadPlayers() {
 // =============================================
 // Screen 1: 参加者選択
 // =============================================
+
+/** ランキングメンバーを賞金降順、続いてゲストを元順序で返す */
+function getSortedPlayerOrder() {
+  const members = S.allPlayers
+    .map((p, i) => ({ ...p, origIdx: i }))
+    .filter(p => RANKING_MEMBERS.includes(p.name))
+    .sort((a, b) => b.money - a.money);
+
+  const guests = S.allPlayers
+    .map((p, i) => ({ ...p, origIdx: i }))
+    .filter(p => !RANKING_MEMBERS.includes(p.name));
+
+  return [...members, ...guests];
+}
+
 function renderPlayerList() {
-  document.getElementById('player-list').innerHTML =
-    S.allPlayers.map((p, i) => {
-      const isR = RANKING_MEMBERS.includes(p.name);
-      return `
-        <div class="player-item" onclick="toggleCb(${i})">
-          <input type="checkbox" class="player-cb" id="cb${i}"
-                 onchange="onPlayerChange()" onclick="event.stopPropagation()">
-          <label class="player-label" for="cb${i}">
-            ${p.name}${isR ? '<span class="r-badge">R</span>' : ''}
-          </label>
-          <div class="player-stats">
-            <div>${fmt(p.money, '円')}</div>
-            <div>${isR ? p.points + 'pt' : '&nbsp;'}</div>
-          </div>
-        </div>`;
-    }).join('');
+  const sorted = getSortedPlayerOrder();
+  document.getElementById('player-list').innerHTML = sorted.map(p => {
+    const i   = p.origIdx;
+    const isR = RANKING_MEMBERS.includes(p.name);
+
+    const statsHtml = `
+      <div>${p.games}戦${p.wins}勝</div>
+      <div>獲得 ${p.winnings.toLocaleString()}円</div>
+      <div>${fmt(p.money, '円')}</div>
+      ${isR ? `<div>${fmtPts(p.points)}</div>` : ''}
+    `;
+
+    const nameCell = isR
+      ? `<span class="player-name">${escHtml(p.name)}</span><span class="r-badge">R</span>`
+      : `<span class="player-name" id="pname_${i}">${escHtml(p.name)}</span>
+         <button class="edit-guest-btn" onclick="startEditGuest(${i},event)">✏️</button>`;
+
+    return `
+      <div class="player-item" onclick="toggleCb(${i})">
+        <input type="checkbox" class="player-cb" id="cb${i}"
+               onchange="onPlayerChange()" onclick="event.stopPropagation()">
+        <div class="player-main">
+          <div class="player-name-row">${nameCell}</div>
+        </div>
+        <div class="player-stats">${statsHtml}</div>
+      </div>`;
+  }).join('');
 }
 
 function toggleCb(i) {
@@ -416,14 +555,10 @@ function toggleCb(i) {
 
 function onPlayerChange() {
   const idxs = checkedIdxs();
-  const ok = idxs.length >= 2;
-  const btn = document.getElementById('btn-to-winners');
-  btn.disabled = !ok;
+  const ok   = idxs.length >= 2;
+  const btn  = document.getElementById('btn-to-winners');
+  btn.disabled    = !ok;
   btn.textContent = ok ? '次へ →' : `2人以上選択してください（${idxs.length}人）`;
-
-  const names = new Set(idxs.map(i => S.allPlayers[i].name));
-  document.getElementById('rank-notify').classList
-    .toggle('show', RANKING_MEMBERS.every(n => names.has(n)));
 }
 
 function checkedIdxs() {
@@ -431,11 +566,67 @@ function checkedIdxs() {
     .map(cb => parseInt(cb.id.replace('cb', '')));
 }
 
+// ---- ゲスト名編集 ----
+function startEditGuest(idx, event) {
+  event.stopPropagation();
+  const span = document.getElementById(`pname_${idx}`);
+  if (!span || span.querySelector('input')) return; // already editing
+  const cur = S.allPlayers[idx].name;
+  span.innerHTML = `<input class="guest-name-input" id="gedit_${idx}"
+    value="${escHtml(cur)}"
+    onblur="saveGuest(${idx})"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+    onclick="event.stopPropagation()">`;
+  const input = document.getElementById(`gedit_${idx}`);
+  input.focus();
+  input.select();
+}
+
+async function saveGuest(idx) {
+  const input = document.getElementById(`gedit_${idx}`);
+  if (!input) return;
+  const newName = input.value.trim();
+  const oldName = S.allPlayers[idx].origName;
+  const finalName = newName || oldName;
+
+  const span = document.getElementById(`pname_${idx}`);
+  if (span) span.textContent = finalName;
+
+  if (finalName !== oldName) {
+    S.allPlayers[idx].name     = finalName;
+    S.allPlayers[idx].origName = finalName;
+    try {
+      await fetch(
+        `${GAS_URL}?action=updateGuest&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(finalName)}`,
+        { redirect: 'follow' }
+      );
+    } catch(e) { console.warn('updateGuest error'); }
+  }
+}
+
+// ---- ポイントモードトグル ----
+function onPointsToggle() {
+  S.pointsMode = document.getElementById('points-toggle').checked;
+  document.getElementById('points-toggle-sub').textContent =
+    S.pointsMode ? 'ON：順位ポイントも記録' : 'OFF：賞金のみ記録';
+  updateSessionBadge();
+}
+
+function updateSessionBadge() {
+  const badge = document.getElementById('session-badge');
+  if (S.pointsMode) {
+    badge.textContent  = `第${S.sessionCount + 1}回`;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 function goWinners() {
   S.selected = checkedIdxs().map(i => S.allPlayers[i]);
-  const names = new Set(S.selected.map(p => p.name));
-  S.rankingActive = RANKING_MEMBERS.every(n => names.has(n));
-  S.winners = [];
+  S.winners  = [];
+  S.ranking  = [];
+  S.tieNext  = false;
   renderWinners();
   show('screen-winners');
 }
@@ -445,11 +636,14 @@ function goWinners() {
 // =============================================
 function renderWinners() {
   document.getElementById('winner-list').innerHTML =
-    S.selected.map((p, i) => `
-      <div class="winner-item" id="wi${i}" onclick="toggleWinner(${i})">
-        <span class="winner-crown">🏆</span>
-        <span class="winner-name">${p.name}</span>
-      </div>`).join('');
+    S.selected.map((p, i) => {
+      const isSel = S.winners.some(w => w.name === p.name);
+      return `
+        <div class="winner-item ${isSel ? 'selected' : ''}" id="wi${i}" onclick="toggleWinner(${i})">
+          <span class="winner-crown">🏆</span>
+          <span class="winner-name">${escHtml(p.name)}</span>
+        </div>`;
+    }).join('');
   updateWinnerBtn();
 }
 
@@ -470,6 +664,12 @@ function goRanking() {
   S.tieNext = false;
   renderRanking();
   show('screen-ranking');
+}
+
+/** 確認画面の「✏️ 勝者を修正」から呼ばれる（S.winners 保持） */
+function editWinners() {
+  renderWinners();
+  show('screen-winners');
 }
 
 // =============================================
@@ -494,14 +694,14 @@ function toggleTie() {
 function tapRank(i) {
   const p = S.selected[i];
   if (S.ranking.find(r => r.name === p.name)) return;
-
   const rank = (S.tieNext && S.ranking.length > 0) ? getLastRank() : getNextRank();
   S.ranking.push({ name: p.name, rank });
   S.tieNext = false;
   renderRanking();
 }
 
-function undoFrom(name) {
+function undoFromIdx(selIdx) {
+  const name  = S.selected[selIdx].name;
   const entry = S.ranking.find(r => r.name === name);
   if (!entry) return;
   S.ranking = S.ranking.filter(r => r.rank < entry.rank);
@@ -510,26 +710,26 @@ function undoFrom(name) {
 }
 
 function renderRanking() {
-  const rankPtsMap = S.rankingActive ? calcRankingPoints(S.ranking) : {};
+  const rankPtsMap = S.pointsMode ? calcRankingPoints(S.ranking) : {};
 
   document.getElementById('ranking-list').innerHTML =
     S.selected.map((p, i) => {
-      const entry = S.ranking.find(r => r.name === p.name);
-      const done  = !!entry;
-      const rank  = done ? entry.rank : null;
+      const entry  = S.ranking.find(r => r.name === p.name);
+      const done   = !!entry;
+      const rank   = done ? entry.rank : null;
       const isTied = done && S.ranking.filter(r => r.rank === rank).length > 1;
-      const isR   = RANKING_MEMBERS.includes(p.name);
-      const pts   = (done && isR && rankPtsMap[p.name] !== undefined)
+      const isR    = RANKING_MEMBERS.includes(p.name);
+      const pts    = (done && isR && rankPtsMap[p.name] !== undefined)
         ? fmtPts(rankPtsMap[p.name]) : '';
 
       return `
         <div class="rank-item ${done ? 'done' : ''} ${isTied ? 'tied' : ''}"
              id="ri_${i}" onclick="${!done ? `tapRank(${i})` : ''}">
           <div class="rank-no">${done ? rank : '?'}</div>
-          <span class="rank-name">${p.name}${isR ? '<span class="r-badge">R</span>' : ''}</span>
+          <span class="rank-name">${escHtml(p.name)}${isR ? '<span class="r-badge">R</span>' : ''}</span>
           <span class="rank-pts">${pts}</span>
           ${done ? `<button class="rank-undo"
-                      onclick="event.stopPropagation();undoFrom('${p.name}')">✕</button>` : ''}
+                      onclick="event.stopPropagation();undoFromIdx(${i})">✕</button>` : ''}
         </div>`;
     }).join('');
 
@@ -547,16 +747,25 @@ function renderRanking() {
   document.getElementById('btn-to-confirm').disabled = remaining > 0;
 }
 
+/** 確認画面の「✏️ 順位を修正」から呼ばれる（S.ranking 保持） */
+function editRanking() {
+  S.tieNext = false;
+  renderRanking();
+  show('screen-ranking');
+}
+
 // =============================================
 // ポイント計算（ランキングメンバー内の相対順位・山分け対応）
 // =============================================
 function calcRankingPoints(rankingData) {
-  // ランキングメンバーのみ抽出し、全体順位でソート
+  // 参加しているランキングメンバーだけ抽出し順位でソート
   const members = rankingData
     .filter(r => RANKING_MEMBERS.includes(r.name))
     .sort((a, b) => a.rank - b.rank);
 
-  // メンバー内相対順位を付与（ties保持）
+  if (members.length === 0) return {};
+
+  // メンバー内の相対順位（ties 保持）
   const memberPos = {};
   let pos = 1;
   for (let i = 0; i < members.length; i++) {
@@ -568,7 +777,7 @@ function calcRankingPoints(rankingData) {
     pos++;
   }
 
-  // 同率を考慮してポイントを山分け
+  // 同率の場合はポイントを山分け
   const pts = {};
   members.forEach(m => {
     const mp   = memberPos[m.name];
@@ -594,19 +803,18 @@ function goConfirm() {
 function calcResults() {
   const wCount = S.winners.length;
   const lCount = S.selected.length - wCount;
-
   // 山分け: 負け人数 × 1500 を勝者で割る
   const prizeEach = wCount > 0 ? Math.round((WIN_PRICE * lCount) / wCount) : 0;
 
-  const rankPtsMap = S.rankingActive ? calcRankingPoints(S.ranking) : {};
+  const rankPtsMap = S.pointsMode ? calcRankingPoints(S.ranking) : {};
 
   return S.selected.map(p => {
-    const isWin   = S.winners.some(w => w.name === p.name);
-    const money   = isWin ? prizeEach : (wCount > 0 ? -WIN_PRICE : 0);
-    const entry   = S.ranking.find(r => r.name === p.name);
-    const rank    = entry ? entry.rank : null;
-    const isR     = RANKING_MEMBERS.includes(p.name);
-    const pts     = (S.rankingActive && isR && rankPtsMap[p.name] !== undefined)
+    const isWin = S.winners.some(w => w.name === p.name);
+    const money = isWin ? prizeEach : (wCount > 0 ? -WIN_PRICE : 0);
+    const entry = S.ranking.find(r => r.name === p.name);
+    const rank  = entry ? entry.rank : null;
+    const isR   = RANKING_MEMBERS.includes(p.name);
+    const pts   = (S.pointsMode && isR && rankPtsMap[p.name] !== undefined)
       ? rankPtsMap[p.name] : null;
 
     return { name: p.name, moneyDelta: money, pointsDelta: pts, isWinner: isWin, rank };
@@ -627,7 +835,7 @@ function buildConfirmRows(results) {
       <div class="c-row">
         <div class="c-left">
           <div class="c-rank-dot ${rankClass(r.rank)}">${r.rank}</div>
-          <span class="c-name">${r.name}${r.isWinner ? ' 🏆' : ''}</span>
+          <span class="c-name">${escHtml(r.name)}${r.isWinner ? ' 🏆' : ''}</span>
         </div>
         <div class="c-right">
           <div class="c-money ${r.moneyDelta >= 0 ? 'pos' : 'neg'}">${fmt(r.moneyDelta, '円')}</div>
@@ -641,7 +849,7 @@ function buildConfirmRows(results) {
 // =============================================
 async function submit() {
   const btn = document.getElementById('btn-submit');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = '送信中...';
 
   const payload = {
@@ -649,12 +857,19 @@ async function submit() {
     participants: S.selected.map(p => p.name),
     winners:      S.winners.map(p => p.name),
     ranking:      S.ranking,
-    results:      S.result
+    results:      S.result,
+    pointsMode:   S.pointsMode
   };
 
   try {
     await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
   } catch (e) { console.warn('POST error:', e); }
+
+  // ポイントあり記録のカウントを更新してバッジを確定表示
+  if (S.pointsMode) {
+    S.sessionCount++;
+    document.getElementById('session-badge').textContent = `第${S.sessionCount}回`;
+  }
 
   document.getElementById('done-rows').innerHTML = buildDoneRows(S.result);
   show('screen-done');
@@ -664,20 +879,21 @@ function buildDoneRows(results) {
   return [...results]
     .sort((a, b) => a.rank - b.rank)
     .map(r => {
-      const base = S.allPlayers.find(p => p.name === r.name)
-        || { money: 0, points: 0, winnings: 0 };
-      const isR       = RANKING_MEMBERS.includes(r.name);
-      const cumMoney  = base.money + r.moneyDelta;
-      const cumWin    = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
-      const cumPts    = isR ? base.points + (r.pointsDelta ?? 0) : null;
-
-      const ptsStr = r.pointsDelta !== null ? fmtPts(r.pointsDelta, true) : '';
+      const base     = S.allPlayers.find(p => p.name === r.name)
+                       || { money: 0, points: 0, winnings: 0, games: 0, wins: 0 };
+      const isR      = RANKING_MEMBERS.includes(r.name);
+      const cumMoney = base.money    + r.moneyDelta;
+      const cumWin   = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
+      const cumPts   = isR ? base.points + (r.pointsDelta ?? 0) : null;
+      const newGames = (base.games || 0) + 1;
+      const newWins  = (base.wins  || 0) + (r.isWinner ? 1 : 0);
+      const ptsStr   = r.pointsDelta !== null ? fmtPts(r.pointsDelta, true) : '';
 
       return `
         <div class="done-player">
           <div class="done-header">
             <div class="done-rank-circle ${rankClass(r.rank)}">${r.rank}位</div>
-            <span class="done-name">${r.name}${r.isWinner ? ' 🏆' : ''}</span>
+            <span class="done-name">${escHtml(r.name)}${r.isWinner ? ' 🏆' : ''}</span>
           </div>
           <div class="done-stat">
             <span class="done-label">今回</span>
@@ -688,9 +904,11 @@ function buildDoneRows(results) {
             <span class="done-label">累計</span>
             <span class="done-val ${cumMoney >= 0 ? 'pos' : 'neg'}">${fmt(cumMoney, '円')}</span>
             <span class="done-sub">獲得 ${cumWin.toLocaleString()}円</span>
-            ${cumPts !== null
-              ? `<span class="done-val neu">${fmtPts(cumPts)}` + (cumPts !== null ? '</span>' : '')
-              : ''}
+            ${cumPts !== null ? `<span class="done-val neu">${fmtPts(cumPts)}</span>` : ''}
+          </div>
+          <div class="done-stat">
+            <span class="done-label">通算</span>
+            <span class="done-val">${newGames}戦${newWins}勝</span>
           </div>
         </div>`;
     }).join('');
@@ -698,27 +916,30 @@ function buildDoneRows(results) {
 
 function shareToLine() {
   const d = new Date();
-  const dateStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
-  let msg = `⛳ ゴルフ戦績 ${dateStr}\n\n`;
+  const dateStr    = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  const sessionStr = S.pointsMode ? ` (第${S.sessionCount}回)` : '';
+  let msg = `⛳ ゴルフ戦績 ${dateStr}${sessionStr}\n\n`;
 
   [...S.result].sort((a, b) => a.rank - b.rank).forEach(r => {
-    const base = S.allPlayers.find(p => p.name === r.name)
-      || { money: 0, points: 0, winnings: 0 };
+    const base     = S.allPlayers.find(p => p.name === r.name)
+                     || { money: 0, points: 0, winnings: 0, games: 0, wins: 0 };
     const isR      = RANKING_MEMBERS.includes(r.name);
-    const cumMoney = base.money + r.moneyDelta;
+    const cumMoney = base.money    + r.moneyDelta;
     const cumWin   = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
     const cumPts   = isR ? base.points + (r.pointsDelta ?? 0) : null;
+    const newGames = (base.games || 0) + 1;
+    const newWins  = (base.wins  || 0) + (r.isWinner ? 1 : 0);
 
     msg += `${r.rank}位 ${r.name}${r.isWinner ? '🏆' : ''}\n`;
     msg += `  今回 ${fmt(r.moneyDelta, '円')}`;
     if (r.pointsDelta !== null) msg += `  ${fmtPts(r.pointsDelta, true)}`;
     msg += `\n  累計 ${fmt(cumMoney, '円')}（獲得 ${cumWin.toLocaleString()}円）`;
     if (cumPts !== null) msg += `  ${fmtPts(cumPts)}`;
-    msg += '\n\n';
+    msg += `\n  通算 ${newGames}戦${newWins}勝\n\n`;
   });
 
   if (liff.isInClient()) {
-    liff.sendMessages([{ type: 'text', content: msg.trimEnd() }])
+    liff.sendMessages([{ type: 'text', text: msg.trimEnd() }])
       .then(() => liff.closeWindow())
       .catch(err => alert('送信失敗: ' + err));
   } else {
@@ -727,11 +948,21 @@ function shareToLine() {
 }
 
 function reset() {
-  S.selected = []; S.rankingActive = false;
-  S.winners = []; S.ranking = []; S.tieNext = false; S.result = null;
+  S.selected   = [];
+  S.pointsMode = false;
+  S.winners    = [];
+  S.ranking    = [];
+  S.tieNext    = false;
+  S.result     = null;
+
   document.querySelectorAll('.player-cb').forEach(cb => cb.checked = false);
-  document.getElementById('rank-notify').classList.remove('show');
+
+  const toggle = document.getElementById('points-toggle');
+  if (toggle) toggle.checked = false;
+  document.getElementById('points-toggle-sub').textContent = 'OFF：賞金のみ記録';
+
   onPlayerChange();
+  updateSessionBadge();
   show('screen-select');
 }
 
@@ -748,16 +979,24 @@ function fmt(n, unit) {
   return (n >= 0 ? '+' : '') + n.toLocaleString() + unit;
 }
 
-// 整数なら整数表示、小数なら1桁
 function fmtPts(n, withSign = false) {
   const sign = withSign && n > 0 ? '+' : '';
   const num  = n % 1 === 0 ? String(Math.round(n)) : n.toFixed(1);
   return `${sign}${num}pt`;
 }
 
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function showErr(msg) {
   const el = document.getElementById('err-banner');
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 </script>
 </body>
