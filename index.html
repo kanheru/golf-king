@@ -411,6 +411,7 @@
       <div class="step"></div><div class="step"></div>
       <div class="step"></div><div class="step on"></div>
     </div>
+    <div class="err-banner" id="submit-banner"></div>
     <div class="card">
       <div class="card-title">確認</div>
       <div id="confirm-rows"></div>
@@ -440,8 +441,11 @@
 // =============================================
 // 設定
 // =============================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbythCEesOyCc5-qYbPnFf4_NcK9xfDASFZ-fc7AQZ99f1zAr-DcSwz2n3xpxTvi_BsrPw/exec';
-const LIFF_ID = 'YOUR_LIFF_ID';  // ← LIFFアプリ作成後に書き換え
+const GAS_FALLBACK_URL = 'https://script.google.com/macros/s/AKfycbznuUT1LI3DpHYuw7lxSdkIW0Dt5KeEn75cijl_Uv3CN8n20e0LpyackkbK436h6WzIiA/exec';
+const GAS_URL = location.href.startsWith('https://script.google.com/macros/s/')
+  ? `${location.origin}${location.pathname}`
+  : GAS_FALLBACK_URL;
+const LIFF_ID = '2010221816-Cd9n3Twx';
 
 const RANKING_MEMBERS = ['伊波', '岡田', '河添', '村瀬', '平野', '穐葉'];
 const RANK_PTS  = [6, 4, 3, 2, 1, 0];
@@ -451,8 +455,12 @@ const WIN_PRICE = 1500;
 // 状態
 // =============================================
 const S = {
-  allPlayers:   [],    // {name, origName, money, points, winnings, games, wins}
+  allPlayers:   [],    // {name, origName, isRanking, money, points, winnings, games, wins}
+  resultBasePlayers: [],
   sessionCount: 0,     // ポイントあり記録の累計数（GASから取得）
+  liffReady:    false,
+  isOffline:    false,
+  lastSavedRecord: null,
   selected:     [],    // 選択した参加者（allPlayersへの参照）
   pointsMode:   false, // ポイントON/OFFトグル
   winners:      [],    // 勝者
@@ -466,8 +474,14 @@ const S = {
 // =============================================
 (async () => {
   setDateBar();
-  try { await liff.init({ liffId: LIFF_ID }); }
-  catch (e) { console.warn('LIFF init skipped'); }
+  try {
+    if (window.liff) {
+      await liff.init({ liffId: LIFF_ID });
+      S.liffReady = true;
+    }
+  } catch (e) {
+    console.warn('LIFF init failed:', e);
+  }
   await loadPlayers();
 })();
 
@@ -482,16 +496,19 @@ async function loadPlayers() {
   try {
     const res  = await fetch(`${GAS_URL}?action=getPlayers`, { redirect: 'follow' });
     const data = await res.json();
-    S.allPlayers  = data.players.map(p => ({ ...p, origName: p.name }));
+    if (!data.players) throw new Error(data.error || 'players not found');
+    S.allPlayers  = data.players.map(p => normalizePlayer(p));
     S.sessionCount = data.sessionCount || 0;
+    S.isOffline = false;
   } catch (e) {
     // オフラインフォールバック
     const guestNames = ['ゲスト1','ゲスト2','ゲスト3','ゲスト4','ゲスト5','ゲスト6','ゲスト7','ゲスト8'];
     S.allPlayers = [
-      ...RANKING_MEMBERS.map(n => ({ name: n, origName: n, money: 0, points: 0, winnings: 0, games: 0, wins: 0 })),
-      ...guestNames.map(n    => ({ name: n, origName: n, money: 0, points: 0, winnings: 0, games: 0, wins: 0 }))
+      ...RANKING_MEMBERS.map(n => ({ name: n, origName: n, isRanking: true, money: 0, points: 0, winnings: 0, games: 0, wins: 0 })),
+      ...guestNames.map(n    => ({ name: n, origName: n, isRanking: false, money: 0, points: 0, winnings: 0, games: 0, wins: 0 }))
     ];
     S.sessionCount = 0;
+    S.isOffline = true;
     showErr('オフライン確認モード（テストデータ）');
   }
   renderPlayerList();
@@ -507,12 +524,12 @@ async function loadPlayers() {
 function getSortedPlayerOrder() {
   const members = S.allPlayers
     .map((p, i) => ({ ...p, origIdx: i }))
-    .filter(p => RANKING_MEMBERS.includes(p.name))
+    .filter(p => isRankingPlayer(p))
     .sort((a, b) => b.money - a.money);
 
   const guests = S.allPlayers
     .map((p, i) => ({ ...p, origIdx: i }))
-    .filter(p => !RANKING_MEMBERS.includes(p.name));
+    .filter(p => !isRankingPlayer(p));
 
   return [...members, ...guests];
 }
@@ -521,7 +538,7 @@ function renderPlayerList() {
   const sorted = getSortedPlayerOrder();
   document.getElementById('player-list').innerHTML = sorted.map(p => {
     const i   = p.origIdx;
-    const isR = RANKING_MEMBERS.includes(p.name);
+    const isR = isRankingPlayer(p);
 
     const statsHtml = `
       <div>${p.games}戦${p.wins}勝</div>
@@ -588,19 +605,35 @@ async function saveGuest(idx) {
   const newName = input.value.trim();
   const oldName = S.allPlayers[idx].origName;
   const finalName = newName || oldName;
+  const duplicate = S.allPlayers.some((p, i) => i !== idx && p.name === finalName);
 
   const span = document.getElementById(`pname_${idx}`);
-  if (span) span.textContent = finalName;
+  if (duplicate || RANKING_MEMBERS.includes(finalName)) {
+    if (span) span.textContent = oldName;
+    showErr('同じ名前、またはランキングメンバー名は使えません');
+    return;
+  }
 
   if (finalName !== oldName) {
+    if (span) span.textContent = finalName;
     S.allPlayers[idx].name     = finalName;
     S.allPlayers[idx].origName = finalName;
     try {
-      await fetch(
+      const res = await fetch(
         `${GAS_URL}?action=updateGuest&oldName=${encodeURIComponent(oldName)}&newName=${encodeURIComponent(finalName)}`,
         { redirect: 'follow' }
       );
-    } catch(e) { console.warn('updateGuest error'); }
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'updateGuest failed');
+    } catch(e) {
+      console.warn('updateGuest error:', e);
+      S.allPlayers[idx].name     = oldName;
+      S.allPlayers[idx].origName = oldName;
+      if (span) span.textContent = oldName;
+      showErr('ゲスト名の保存に失敗しました');
+    }
+  } else if (span) {
+    span.textContent = finalName;
   }
 }
 
@@ -718,7 +751,7 @@ function renderRanking() {
       const done   = !!entry;
       const rank   = done ? entry.rank : null;
       const isTied = done && S.ranking.filter(r => r.rank === rank).length > 1;
-      const isR    = RANKING_MEMBERS.includes(p.name);
+      const isR    = isRankingPlayer(p);
       const pts    = (done && isR && rankPtsMap[p.name] !== undefined)
         ? fmtPts(rankPtsMap[p.name]) : '';
 
@@ -760,7 +793,7 @@ function editRanking() {
 function calcRankingPoints(rankingData) {
   // 参加しているランキングメンバーだけ抽出し順位でソート
   const members = rankingData
-    .filter(r => RANKING_MEMBERS.includes(r.name))
+    .filter(r => isRankingName(r.name))
     .sort((a, b) => a.rank - b.rank);
 
   if (members.length === 0) return {};
@@ -796,6 +829,8 @@ function calcRankingPoints(rankingData) {
 // =============================================
 function goConfirm() {
   S.result = calcResults();
+  S.resultBasePlayers = clonePlayers(S.allPlayers);
+  hideSubmitBanner();
   document.getElementById('confirm-rows').innerHTML = buildConfirmRows(S.result);
   show('screen-confirm');
 }
@@ -813,7 +848,7 @@ function calcResults() {
     const money = isWin ? prizeEach : (wCount > 0 ? -WIN_PRICE : 0);
     const entry = S.ranking.find(r => r.name === p.name);
     const rank  = entry ? entry.rank : null;
-    const isR   = RANKING_MEMBERS.includes(p.name);
+    const isR   = isRankingPlayer(p);
     const pts   = (S.pointsMode && isR && rankPtsMap[p.name] !== undefined)
       ? rankPtsMap[p.name] : null;
 
@@ -849,39 +884,63 @@ function buildConfirmRows(results) {
 // =============================================
 async function submit() {
   const btn = document.getElementById('btn-submit');
+  const recordId = makeRecordId();
+  if (S.isOffline) {
+    showSubmitBanner('オフライン確認モードでは保存できません。通信が戻ってから再読み込みしてください。');
+    return;
+  }
+
   btn.disabled    = true;
   btn.textContent = '送信中...';
+  hideSubmitBanner();
 
   const payload = {
+    recordId,
     date:         new Date().toISOString(),
     participants: S.selected.map(p => p.name),
     winners:      S.winners.map(p => p.name),
     ranking:      S.ranking,
-    results:      S.result,
     pointsMode:   S.pointsMode
   };
 
   try {
     await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-  } catch (e) { console.warn('POST error:', e); }
+    btn.textContent = '保存確認中...';
+    const saved = await waitForRecord(recordId);
+    if (!saved || !saved.saved || !saved.record) {
+      throw new Error('record was not confirmed');
+    }
 
-  // ポイントあり記録のカウントを更新してバッジを確定表示
-  if (S.pointsMode) {
-    S.sessionCount++;
-    document.getElementById('session-badge').textContent = `第${S.sessionCount}回`;
+    S.lastSavedRecord = saved.record;
+    S.result = Array.isArray(saved.record.results) && saved.record.results.length
+      ? saved.record.results
+      : S.result;
+    S.sessionCount = saved.sessionCount || S.sessionCount;
+    if (Array.isArray(saved.players)) {
+      S.allPlayers = saved.players.map(p => normalizePlayer(p));
+    }
+
+    if (S.pointsMode) {
+      document.getElementById('session-badge').textContent = `第${S.sessionCount}回`;
+    }
+
+    document.getElementById('done-rows').innerHTML = buildDoneRows(S.result);
+    show('screen-done');
+  } catch (e) {
+    console.warn('submit error:', e);
+    showSubmitBanner('保存を確認できませんでした。通信状態を確認して、もう一度「記録する」を押してください。');
+    btn.disabled = false;
+    btn.textContent = '記録する ✓';
   }
-
-  document.getElementById('done-rows').innerHTML = buildDoneRows(S.result);
-  show('screen-done');
 }
 
 function buildDoneRows(results) {
   return [...results]
     .sort((a, b) => a.rank - b.rank)
     .map(r => {
-      const base     = S.allPlayers.find(p => p.name === r.name)
+      const base     = findBasePlayer(r.name)
                        || { money: 0, points: 0, winnings: 0, games: 0, wins: 0 };
-      const isR      = RANKING_MEMBERS.includes(r.name);
+      const isR      = isRankingName(r.name);
       const cumMoney = base.money    + r.moneyDelta;
       const cumWin   = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
       const cumPts   = isR ? base.points + (r.pointsDelta ?? 0) : null;
@@ -921,9 +980,9 @@ function shareToLine() {
   let msg = `⛳ ゴルフ戦績 ${dateStr}${sessionStr}\n\n`;
 
   [...S.result].sort((a, b) => a.rank - b.rank).forEach(r => {
-    const base     = S.allPlayers.find(p => p.name === r.name)
+    const base     = findBasePlayer(r.name)
                      || { money: 0, points: 0, winnings: 0, games: 0, wins: 0 };
-    const isR      = RANKING_MEMBERS.includes(r.name);
+    const isR      = isRankingName(r.name);
     const cumMoney = base.money    + r.moneyDelta;
     const cumWin   = base.winnings + (r.moneyDelta > 0 ? r.moneyDelta : 0);
     const cumPts   = isR ? base.points + (r.pointsDelta ?? 0) : null;
@@ -938,7 +997,7 @@ function shareToLine() {
     msg += `\n  通算 ${newGames}戦${newWins}勝\n\n`;
   });
 
-  if (liff.isInClient()) {
+  if (S.liffReady && window.liff && liff.isInClient()) {
     liff.sendMessages([{ type: 'text', text: msg.trimEnd() }])
       .then(() => liff.closeWindow())
       .catch(err => alert('送信失敗: ' + err));
@@ -954,6 +1013,8 @@ function reset() {
   S.ranking    = [];
   S.tieNext    = false;
   S.result     = null;
+  S.resultBasePlayers = [];
+  S.lastSavedRecord = null;
 
   document.querySelectorAll('.player-cb').forEach(cb => cb.checked = false);
 
@@ -961,8 +1022,10 @@ function reset() {
   if (toggle) toggle.checked = false;
   document.getElementById('points-toggle-sub').textContent = 'OFF：賞金のみ記録';
 
+  renderPlayerList();
   onPlayerChange();
   updateSessionBadge();
+  hideSubmitBanner();
   show('screen-select');
 }
 
@@ -973,6 +1036,73 @@ function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+}
+
+function normalizePlayer(p) {
+  return {
+    name: String(p.name || ''),
+    origName: String(p.name || ''),
+    isRanking: p.isRanking === true || RANKING_MEMBERS.includes(String(p.name || '')),
+    money: Number(p.money || 0),
+    points: Number(p.points || 0),
+    winnings: Number(p.winnings || 0),
+    games: Number(p.games || 0),
+    wins: Number(p.wins || 0)
+  };
+}
+
+function isRankingPlayer(p) {
+  return !!(p && p.isRanking);
+}
+
+function isRankingName(name) {
+  const player = S.allPlayers.find(p => p.name === name);
+  return player ? isRankingPlayer(player) : RANKING_MEMBERS.includes(name);
+}
+
+function clonePlayers(players) {
+  return players.map(p => ({ ...p }));
+}
+
+function findBasePlayer(name) {
+  return (S.resultBasePlayers.length ? S.resultBasePlayers : S.allPlayers)
+    .find(p => p.name === name);
+}
+
+function makeRecordId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function waitForRecord(recordId) {
+  for (let i = 0; i < 10; i++) {
+    await delay(i === 0 ? 600 : 900);
+    const res = await fetch(
+      `${GAS_URL}?action=getRecordStatus&recordId=${encodeURIComponent(recordId)}&t=${Date.now()}`,
+      { redirect: 'follow' }
+    );
+    const data = await res.json();
+    if (data.saved) return data;
+  }
+  return null;
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function showSubmitBanner(msg) {
+  const el = document.getElementById('submit-banner');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideSubmitBanner() {
+  const el = document.getElementById('submit-banner');
+  if (!el) return;
+  el.textContent = '';
+  el.style.display = 'none';
 }
 
 function fmt(n, unit) {
